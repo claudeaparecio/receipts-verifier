@@ -412,7 +412,7 @@ const Main = () => {
     <Grid sx={{ px: '16px' }} height="100vh" direction="column">
       <Grid container alignItems="center" height="10vh" sx={{ borderBottom: "1px solid lightgrey" }}>
         <Typography variant='h4' sx={{ flexGrow: 1 }} >
-          NOTED Receipts Verifier
+          Noted File Verifier
         </Typography>
         <Box>
           {!isStartClicked &&

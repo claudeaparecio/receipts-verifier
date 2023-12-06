@@ -1,6 +1,6 @@
 {
-  "short_name": "React App",
-  "name": "Create React App Sample",
+  "short_name": "File Verifier",
+  "name": "File Verifier for Emails (Receipts, Shipping Notice & Promo Notice)",
   "icons": [
     {
       "src": "favicon.ico",
