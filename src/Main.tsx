@@ -195,26 +195,26 @@ const Main = () => {
   const handleKeyUp = useCallback((e: any) => {
     const key = e.key;
 
-    if (key === '1' || key === 1) {
-      var button = document.getElementById('add_to_receipt_button');
-      button?.click();
+    if (key === '1') {
+      var addToReceiptButton = document.getElementById('add_to_receipt_button');
+      addToReceiptButton?.click();
     }
 
-    if (key === '2' || key === 2) {
-      var button = document.getElementById('add_to_shipping_button');
-      button?.click();
+    if (key === '2') {
+      var addToShippingButton = document.getElementById('add_to_shipping_button');
+      addToShippingButton?.click();
       return
     }
 
-    if (key === '3' || key === 3) {
-      var button = document.getElementById('add_to_promo_button');
-      button?.click();
+    if (key === '3') {
+      var addToPromoButton = document.getElementById('add_to_promo_button');
+      addToPromoButton?.click();
       return
     }
 
     if (key === '4') {
-      var button = document.getElementById('next_button');
-      button?.click();
+      var nextButton = document.getElementById('next_button');
+      nextButton?.click();
     }
   }, [currentFileIndex]);
 
@@ -405,14 +405,30 @@ const Main = () => {
     }, '');
 
     await navigator.clipboard.writeText(data);
-    alert(`${currentTabName} successfully copied!`);
   }, [emailViewIndex, emailList, shouldRemoveFileType]);
+
+  const copyProgress = useCallback(async () => {
+    let data
+    const lastScannedIndex = files.findIndex(item => item.type === undefined || item.type === null);
+
+    if (lastScannedIndex === -1) {
+      data = files.reduce((string, email) => {
+        return string += `${email.name}\n`
+      }, '');
+    } else {
+      data = files.slice(0, lastScannedIndex).reduce((string, email) => {
+        return string += `${email.name}\n`
+      }, '');
+    }
+
+    await navigator.clipboard.writeText(data);
+  }, [files]);
 
   return (
     <Grid sx={{ px: '16px' }} height="100vh" direction="column">
       <Grid container alignItems="center" height="10vh" sx={{ borderBottom: "1px solid lightgrey" }}>
         <Typography variant='h4' sx={{ flexGrow: 1 }} >
-          Noted File Verifier
+          Noted: File Verifier
         </Typography>
         <Box>
           {!isStartClicked &&
@@ -501,6 +517,9 @@ const Main = () => {
               </List>
             </Grid>
           </Grid>
+          <Button onClick={copyProgress} sx={{ py: 2, mt: 2 }} variant='contained' color='primary'>
+            Copy Last Progress
+          </Button>
           <Divider sx={{ my: 2 }} />
           <Box sx={{ width: '100%' }}>
             <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
@@ -526,7 +545,7 @@ const Main = () => {
           </Grid>
         </Grid>
         {/* Email viewer */}
-        <Grid item md={6} height="90vh" container justifyContent="center" sx={{ overflow: "auto" }} bgcolor="lightgrey" >
+        <Grid item md={6} height="90vh" container justifyContent="center" sx={{ overflow: "auto", overflowX: 'auto' }} bgcolor="lightgrey" >
           {HtmlParser(currentHTMLContent)}
         </Grid>
         {/* Buttons */}
