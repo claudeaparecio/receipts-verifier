@@ -7,16 +7,11 @@ import {
   ListItemButton,
   ListItem,
   ListItemText,
-  ListItemIcon,
   Box,
-  IconButton,
-  Input,
   Tabs,
   Tab,
-  Radio,
   Checkbox,
   Tooltip,
-  Badge,
 } from '@mui/material'
 import '@fontsource/roboto/300.css';
 import '@fontsource/roboto/400.css';
@@ -77,7 +72,7 @@ const Main = () => {
   const [shippingNoticeEmails, setShippingNoticeEmails] = useState<string[]>([]);
   const [emailViewIndex, setEmailViewIndex] = useState(0)
   const [isStartClicked, setIsStartClicked] = useState(false);
-  const [shouldRemoveFileType, setShouldRemoveFileType] = useState(true);
+  const [shouldRemoveFileType, setShouldRemoveFileType] = useState(false);
   const [isDone, setIsDone] = useState(true);
   const progressContainerRef = useRef<HTMLUListElement>(null)
   const [currentActiveFile, setCurrentActiveFile] = useState('');
@@ -98,6 +93,12 @@ const Main = () => {
       setFiles(newFiles);
     }
   };
+
+  const onStart = useCallback(() => {
+    setIsStartClicked(true)
+    setIsDone(false);
+    handleNextClick();
+  }, [files]);
 
   const getValidation = ({ fileName, listOne, listTwo, listOneName, listTwoName }: {
     fileName: string;
@@ -425,7 +426,7 @@ const Main = () => {
   }, [files]);
 
   return (
-    <Grid sx={{ px: '16px' }} height="100vh" direction="column">
+    <Grid height="100vh" direction="column">
       <Grid container alignItems="center" height="10vh" sx={{ borderBottom: "1px solid lightgrey" }}>
         <Typography variant='h4' sx={{ flexGrow: 1 }} >
           Noted: File Verifier
@@ -444,11 +445,7 @@ const Main = () => {
               <input style={{ display: 'none' }} type="file" id="fileInput" multiple onChange={handleFileChange} />
               <Button
                 variant="contained"
-                onClick={() => {
-                  setIsStartClicked(true)
-                  setIsDone(false);
-                  handleNextClick()
-                }}
+                onClick={onStart}
                 color='success'
               >
                 Start
@@ -540,7 +537,7 @@ const Main = () => {
             Copy {currentTabName}
           </Button>
           <Grid>
-            <Checkbox value={shouldRemoveFileType} defaultChecked onChange={e => setShouldRemoveFileType(e.target.checked)} />
+            <Checkbox value={shouldRemoveFileType} defaultChecked={false} onChange={e => setShouldRemoveFileType(e.target.checked)} />
             Remove file type (.html)
           </Grid>
         </Grid>
@@ -549,7 +546,7 @@ const Main = () => {
           {HtmlParser(currentHTMLContent)}
         </Grid>
         {/* Buttons */}
-        <Grid item container direction="column" rowGap={2} md={2} pl={2}>
+        <Grid item container direction="column" rowGap={2} md={2} pr={2} pl={2}>
           <Button id='add_to_receipt_button' sx={{ height: "100px" }} startIcon={<LooksOne />} variant='contained' color='primary' onClick={addToReceipts} disabled={isDone}>
             ADD TO RECEIPTS
           </Button>
