@@ -12,6 +12,8 @@ import {
   Tab,
   Checkbox,
   Tooltip,
+  Pagination,
+  IconButton,
 } from '@mui/material'
 import '@fontsource/roboto/300.css';
 import '@fontsource/roboto/400.css';
@@ -19,8 +21,10 @@ import '@fontsource/roboto/500.css';
 import '@fontsource/roboto/700.css';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import './App.css';
-import HtmlParser from 'react-html-parser';
+import DOMPurify from "dompurify";
+import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
 import { Looks3, Looks4, LooksOne, LooksTwo } from '@mui/icons-material';
+import { GridDeleteIcon } from '@mui/x-data-grid';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -76,6 +80,18 @@ const Main = () => {
   const [isDone, setIsDone] = useState(true);
   const progressContainerRef = useRef<HTMLUListElement>(null)
   const [currentActiveFile, setCurrentActiveFile] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [emailList, setEmailList] = useState<string[]>([]);
+
+
+  const itemsPerPage = 50;
+  const totalFiles = files?.length;
+  const totalPages = Math.ceil(totalFiles / itemsPerPage);
+
+  const displayData = files?.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
   const handleFileChange = (event: any) => {
     const selectedFiles = event.target.files;
@@ -100,12 +116,14 @@ const Main = () => {
     handleNextClick();
   }, [files]);
 
-  const getValidation = ({ fileName, listOne, listTwo, listOneName, listTwoName }: {
+  const getValidation = ({ fileName, listOne, listTwo, listOneName, listTwoName, listThree, listThreeName }: {
     fileName: string;
     listOne: any[];
     listTwo: any[];
     listOneName: string;
     listTwoName: string;
+    listThree?: any[];
+    listThreeName?: string;
   }) => {
     const listOneIndex = listOne.findIndex((item: any) => item === fileName)
     if (listOneIndex !== -1) {
@@ -116,19 +134,31 @@ const Main = () => {
     if (listTwoIndex !== -1) {
       return { error: `Item Already Exist in ${listTwoName}, move the item into its respective section from there.` }
     }
+
+    if (listThree && listThreeName) {
+      const listThreeIndex = listThree?.findIndex((item: any) => item === fileName)
+      if (listThreeIndex !== -1) {
+        return { error: `Item Already Exist in ${listThreeName}, move the item into its respective section from there.` }
+      }
+    }
   }
 
-  const handleNextClick = () => {
+  const handleNextClick = useCallback(() => {
     if (currentFileIndex < files.length - 1) {
       const nextFileIndex = currentFileIndex + 1;
       const nextFile: any = files[nextFileIndex];
       setCurrentFileIndex(nextFileIndex);
-      setCurrentHTMLContent(nextFile.content);
+      setCurrentHTMLContent(DOMPurify.sanitize(nextFile.content));
       setCurrentActiveFile(nextFile.name);
+
+      if (currentFileIndex >= 1 && (currentFileIndex + 1) % 50 === 0) {
+        console.log('HERE AT CLICK')
+        setCurrentPage(page => page += 1)
+      }
     } else {
       setIsDone(true);
     }
-  };
+  }, [currentFileIndex, files]);
 
   const appendEmailType = (fileName: string, type: FileTypes) => {
     setFiles(data => data.map((item) => item?.name === fileName ? { ...item, type } : item))
@@ -143,8 +173,8 @@ const Main = () => {
       alert(validation?.error);
       return;
     }
+    appendEmailType(fileName, FileTypes.Shipping);
     if (fileName && !shippingNoticeEmails.includes(fileName)) {
-      appendEmailType(fileName, FileTypes.Shipping);
       setShippingNoticeEmails(emails => emails.concat(fileName));
       setEmailViewIndex(1);
     }
@@ -161,8 +191,8 @@ const Main = () => {
       return;
     }
 
+    appendEmailType(fileName, FileTypes.Receipt);
     if (fileName && !receiptEmails.includes(fileName)) {
-      appendEmailType(fileName, FileTypes.Receipt);
       setReceiptEmails(emails => emails.concat(fileName));
       setEmailViewIndex(0);
     }
@@ -179,8 +209,8 @@ const Main = () => {
       return;
     }
 
+    appendEmailType(fileName, FileTypes.Promo);
     if (fileName && !promoNoticeEmails.includes(fileName)) {
-      appendEmailType(fileName, FileTypes.Promo);
       setPromoNoticeEmails(emails => emails.concat(fileName));
       setEmailViewIndex(2);
     }
@@ -189,6 +219,14 @@ const Main = () => {
 
   const onClickNext = useCallback(() => {
     let fileName = files[currentFileIndex]?.name;
+
+    const validation = getValidation({ fileName, listOne: receiptEmails, listTwo: shippingNoticeEmails, listThree: promoNoticeEmails, listThreeName: 'Promo Notice', listOneName: 'Receipts', listTwoName: 'Shipping Notice' });
+
+    if (validation?.error) {
+      alert(validation?.error);
+      return;
+    }
+
     appendEmailType(fileName, FileTypes.Skipped)
     handleNextClick();
   }, [currentFileIndex])
@@ -270,7 +308,25 @@ const Main = () => {
     setEmailViewIndex(1);
   }
 
-  const [emailList, setEmailList] = useState<string[]>([]);
+  const removeItemInList = (emailViewIndex: number, fileName: string) => {
+    
+    setFiles(data => data.map((item) => item?.name === fileName ? { ...item, type: undefined } : item))
+    setEmailList(list => list.filter(itemName => fileName !== itemName))
+    switch (emailViewIndex) {
+      case 0:
+        setReceiptEmails(list => list.filter(itemName => itemName !== fileName))
+        return;
+      case 1:
+        setShippingNoticeEmails(list => list.filter(itemName => itemName !== fileName))
+        return;
+      case 2:
+        setPromoNoticeEmails(list => list.filter(itemName => itemName !== fileName))
+        return;
+      default:
+        return;
+    }
+  }
+
   const renderViewEmailList = (index: number) => {
 
     return emailList.map((email, i) => {
@@ -285,7 +341,7 @@ const Main = () => {
                 const index = files.findIndex(item => item?.name === email)
                 const data = files.find(item => item?.name === email);
                 setCurrentFileIndex(index);
-                setCurrentHTMLContent(data?.content);
+                setCurrentHTMLContent(DOMPurify.sanitize(data?.content));
                 setCurrentActiveFile(data?.name);
               }}
               sx={{ justifyContent: "space-between", alignItems: "center", cursor: 'pointer', bgcolor: isFileSelected ? '#CBC3E3' : 'inherit', py: 1 }}
@@ -347,6 +403,11 @@ const Main = () => {
                   Move to Receipt
                 </Button>
               </>}
+              <IconButton onClick={() => {
+                removeItemInList(index, email)
+              }}>
+                <DeleteForeverIcon color='error' />
+              </IconButton>
             </Box>
           </Tooltip>
           <Divider sx={{ my: 1 }} />
@@ -380,15 +441,10 @@ const Main = () => {
   }, [emailViewIndex, currentHTMLContent, isDone])
 
   const clearAll = () => {
-    setIsStartClicked(false);
-    setReceiptEmails([])
-    setPromoNoticeEmails([])
-    setShippingNoticeEmails([]);
-    setFiles([]);
-    setCurrentHTMLContent('');
-    setCurrentActiveFile('');
-    setEmailViewIndex(0);
-    setCurrentFileIndex(-1);
+    const confirmed = window.confirm('Are you sure you want to reload the page?')
+    if (confirmed) {
+      window.location.reload()
+    }
   }
 
   const currentFileIndexString = currentFileIndex === -1 ? 0 : currentFileIndex + 1;
@@ -425,9 +481,13 @@ const Main = () => {
     await navigator.clipboard.writeText(data);
   }, [files]);
 
+  const handlePageChange = (event: React.ChangeEvent<unknown>, value: number) => {
+    setCurrentPage(value);
+  };
+
   return (
     <Grid height="100vh" direction="column">
-      <Grid container alignItems="center" height="10vh" sx={{ borderBottom: "1px solid lightgrey" }}>
+      <Grid container px='16px' alignItems="center" height="10vh" sx={{ borderBottom: "1px solid lightgrey" }}>
         <Typography variant='h4' sx={{ flexGrow: 1 }} >
           Noted: File Verifier
         </Typography>
@@ -468,21 +528,24 @@ const Main = () => {
             <Typography flexGrow={1} fontSize="22px"
               fontWeight="bold">Progress</Typography>
             <Typography fontSize="22px"
-              fontWeight="bold">{currentFileIndexString}/{files?.length}</Typography>
+              fontWeight="bold">{currentFileIndexString}/{totalFiles}</Typography>
           </Grid>
           <Grid item overflow='auto' height='200px' container>
             <Grid md={12} textAlign='left'>
               <List ref={progressContainerRef} dense={true}>
-                {files.map((file: any, index) => {
+                {displayData.map((file: any, index) => {
                   const type = file?.type;
+                  const fileName = file?.name;
                   const bgcolor = type === FileTypes.Receipt ? '#230448' : type === FileTypes.Promo ? '#FFBF42' : type === FileTypes.Shipping ? '#0188D1' : 'inherit';
                   const color = type === FileTypes.Receipt ? '#ffffff' : type === FileTypes.Promo ? '#000000' : type === FileTypes.Shipping ? '#ffffff' : 'inherit';
-                  const isSelected = index === currentFileIndex;
+                  const isSelected = fileName === currentActiveFile;
                   return (
-                    <ListItemButton autoFocus={isSelected} selected={index === currentFileIndex} key={index} onClick={() => {
-                      setCurrentFileIndex(index)
-                      setCurrentHTMLContent(file?.content);
-                      setCurrentActiveFile(file?.name);
+                    <ListItemButton autoFocus={isSelected} selected={isSelected} key={index} onClick={() => {
+                      const thisItemIndex = files.findIndex(file => file.name === fileName)
+                      const thisItem = files.find(file => file.name === fileName)
+                      setCurrentFileIndex(thisItemIndex)
+                      setCurrentHTMLContent(DOMPurify.sanitize(thisItem?.content));
+                      setCurrentActiveFile(thisItem?.name);
                     }}
                       sx={{
                         "&.Mui-selected": {
@@ -514,6 +577,10 @@ const Main = () => {
               </List>
             </Grid>
           </Grid>
+          <Grid mt={1} display='flex' justifyContent='flex-end'>
+            <Typography>Page: {currentPage}</Typography>
+            <Pagination count={totalPages} page={currentPage} onChange={handlePageChange} />
+          </Grid>
           <Button onClick={copyProgress} sx={{ py: 2, mt: 2 }} variant='contained' color='primary'>
             Copy Last Progress
           </Button>
@@ -543,7 +610,7 @@ const Main = () => {
         </Grid>
         {/* Email viewer */}
         <Grid item md={6} height="90vh" container justifyContent="center" sx={{ overflow: "auto", overflowX: 'auto' }} bgcolor="lightgrey" >
-          {HtmlParser(currentHTMLContent)}
+          <div dangerouslySetInnerHTML={{ __html: currentHTMLContent }} />
         </Grid>
         {/* Buttons */}
         <Grid item container direction="column" rowGap={2} md={2} pr={2} pl={2}>
