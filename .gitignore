@@ -23,6 +23,6 @@ yarn-debug.log*
 yarn-error.log*
 
 /emails
-/.firebase
+/.firebase/hosting.*
 .firebase
 hosting.*
